@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Fase 3 - IA em Ação{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 text-center mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h2><i class="fas fa-robot"></i> Fase 3: IA em Ação</h2>
+                <p class="lead">Vê a Inteligência Artificial a trabalhar automaticamente!</p>
+                <div class="alert alert-info">
+                    A qualidade dos resultados da IA depende de quão bem a ensinaste na Fase 2<br>
+                    <strong>Precisão:</strong> {{ phase2_accuracy|round(1) }}% | <strong>Progresso:</strong> {{ phase2_progress|round(1) }}%<br>
+                    <strong>Qualidade do Treino:</strong> {{ phase2_training_quality|round(1) }}%
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <h5><i class="fas fa-image"></i> Imagem Original (Distorcida)</h5>
+                        <div class="image-container mb-3">
+                            <img id="originalImage" src="/api/get_distorted_image2" alt="Imagem Original" class="img-fluid">
+                        </div>
+                        <p class="text-muted small">Imagem tal como sai do microscópio</p>
+                    </div>
+                    
+                    <div class="col-md-4 text-center">
+                        <h5><i class="fas fa-magic"></i> Imagem Melhorada pela IA</h5>
+                        <div class="image-container mb-3">
+                            <img id="enhancedImage" src="#" alt="Imagem Melhorada" class="img-fluid" style="display: none;">
+                            <div id="enhancedPlaceholder" class="d-flex align-items-center justify-content-center" style="height: 200px; background: #f8f9fa; border-radius: 10px;">
+                                <span class="text-muted">Clica no botão para melhorar</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="enhanceButton">
+                            <i class="fas fa-wand-magic-sparkles"></i> Melhorar com IA
+                        </button>
+                    </div>
+                    
+                    <div class="col-md-4 text-center">
+                        <h5><i class="fas fa-bullseye"></i> Células Detectadas pela IA</h5>
+                        <div class="image-container mb-3">
+                            <div style="position: relative;">
+                                <img id="detectedImage" src="#" alt="Células Detectadas" class="img-fluid" style="display: none;">
+                                <canvas id="detectionCanvas" style="position: absolute; top: 0; left: 0; display: none;"></canvas>
+                            </div>
+                            <div id="detectedPlaceholder" class="d-flex align-items-center justify-content-center" style="height: 200px; background: #f8f9fa; border-radius: 10px;">
+                                <span class="text-muted">A IA vai encontrar células</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-success" id="detectButton" disabled>
+                            <i class="fas fa-search"></i> IA Encontrar Células
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12 text-center">
+                        <div class="alert alert-warning">
+                            <h5><i class="fas fa-chart-line"></i> Resultados da IA</h5>
+                            <div id="aiResults" style="display: none;">
+                                <p>Células detectadas: <span id="detectedCount">0</span> / <span id="totalCells">0</span></p>
+                                <p>Baseado no teu treino - Precisão: <strong>{{ phase2_accuracy|round(1) }}%</strong> | Progresso: <strong>{{ phase2_progress|round(1) }}%</strong></p>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ phase2_training_quality|round(1) }}%">
+                                        {{ phase2_training_quality|round(1) }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12 text-center">
+                        <button class="btn btn-secondary" id="resetButton">
+                            <i class="fas fa-undo"></i> Voltar ao Início
+                        </button>
+                        <button class="btn btn-warning ms-2" id="testDetectionButton">
+                            <i class="fas fa-bug"></i> Testar Detecção
+                        </button>
+                        <button class="btn btn-info ms-2" onclick="location.href='{{ url_for('index') }}'">
+                            <i class="fas fa-home"></i> Ir para Homepage
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="completionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-graduation-cap"></i> Parabéns!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="alert alert-success">
+                    <h4>Completaste a aventura da IA em Microscopia!</h4>
+                    <p>Aprendeste como a Inteligência Artificial pode:</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> Melhorar imagens automaticamente</li>
+                        <li><i class="fas fa-check text-success"></i> Aprender com exemplos que lhe damos</li>
+                        <li><i class="fas fa-check text-success"></i> Detectar células e outros objetos</li>
+                    </ul>
+                    <p><strong>A qualidade da IA depende sempre de quão bem a ensinamos!</strong></p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-6">
+                        <div class="score-display">
+                            <h5>Fase 1</h5>
+                            <h3>Processamento</h3>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="score-display">
+                            <h5>Fase 2</h5>
+                            <h3>{{ phase2_training_quality|round(1) }}%</h3>
+                            <small>Qualidade do Treino (Precisão × Progresso)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" onclick="location.href='{{ url_for('index') }}'">
+                    <i class="fas fa-redo"></i> Experimentar Novamente
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+        const phase2Accuracy = {{ phase2_accuracy }};
+        const phase2Progress = {{ phase2_progress }};
+        const phase2TrainingQuality = {{ phase2_training_quality }};
+        
+        console.log('DEBUG: Phase 3 loaded with accuracy:', phase2Accuracy, 'progress:', phase2Progress, 'training quality:', phase2TrainingQuality);let detectionCanvas, detectionCtx;
+let cellPositions = [];
+
+// Load the second set of images and cell positions
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('DEBUG: DOM loaded, training quality score is:', phase2TrainingQuality);
+    
+    // Initialize detection canvas
+    detectionCanvas = document.getElementById('detectionCanvas');
+    detectionCtx = detectionCanvas.getContext('2d');
+    
+    // Load cell positions for phase 3
+    try {
+        const response = await fetch('/api/get_cell_labels2');
+        const data = await response.json();
+        cellPositions = data.cell_positions;
+        console.log('DEBUG: Loaded cell positions:', cellPositions);
+    } catch (error) {
+        console.error('Failed to load cell positions for phase 3:', error);
+        // Fallback to hardcoded positions
+        cellPositions = [
+            {x: 0.15, y: 0.25}, {x: 0.35, y: 0.15}, {x: 0.55, y: 0.35}, 
+            {x: 0.25, y: 0.55}, {x: 0.65, y: 0.65}, {x: 0.05, y: 0.75},
+            {x: 0.75, y: 0.15}, {x: 0.45, y: 0.75}
+        ];
+        console.log('DEBUG: Using fallback cell positions:', cellPositions);
+    }
+    
+    // Update total cells count display
+    document.getElementById('totalCells').textContent = cellPositions.length;
+    console.log('DEBUG: Set total cells to:', cellPositions.length);
+});
+
+document.getElementById('enhanceButton').addEventListener('click', function() {
+    // Show enhanced image (clean version of image 2)
+    document.getElementById('enhancedImage').src = '/api/get_original_image2';
+    document.getElementById('enhancedImage').style.display = 'block';
+    document.getElementById('enhancedPlaceholder').style.display = 'none';
+    
+    // Enable detection button
+    document.getElementById('detectButton').disabled = false;
+    
+    // Add loading effect
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+    this.disabled = true;
+    
+    setTimeout(() => {
+        this.innerHTML = '<i class="fas fa-check"></i> Melhorado!';
+        this.classList.remove('btn-primary');
+        this.classList.add('btn-success');
+    }, 2000);
+});
+
+document.getElementById('detectButton').addEventListener('click', function() {
+    // Show detected image
+    const enhancedImg = document.getElementById('enhancedImage');
+    document.getElementById('detectedImage').src = enhancedImg.src;
+    document.getElementById('detectedImage').style.display = 'block';
+    document.getElementById('detectedPlaceholder').style.display = 'none';
+    
+    // Setup detection canvas
+    const detectedImg = document.getElementById('detectedImage');
+    detectedImg.onload = function() {
+        const rect = this.getBoundingClientRect();
+        detectionCanvas.width = rect.width;
+        detectionCanvas.height = rect.height;
+        detectionCanvas.style.display = 'block';
+        
+        // Simulate AI detection based on phase 2 score
+        simulateDetection();
+    };
+    
+    // Add loading effect
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detectando...';
+    this.disabled = true;
+    
+    setTimeout(() => {
+        this.innerHTML = '<i class="fas fa-check"></i> Detectado!';
+        this.classList.remove('btn-success');
+        this.classList.add('btn-info');
+        
+        // Show results
+        document.getElementById('aiResults').style.display = 'block';
+    }, 3000);
+});
+
+function simulateDetection() {
+    console.log('DEBUG: simulateDetection called');
+    console.log('DEBUG: accuracy:', phase2Accuracy, 'progress:', phase2Progress, 'training quality:', phase2TrainingQuality);
+    
+    // Simulate cell detection based on the training quality (multiplication of phase 2 accuracy and progress)
+    const totalCells = cellPositions.length;
+    const detectedCells = Math.round((phase2TrainingQuality / 100) * totalCells);
+    
+    console.log('DEBUG: totalCells:', totalCells);
+    console.log('DEBUG: detectedCells calculated:', detectedCells);
+    
+    // Create a copy of cell positions and shuffle it randomly
+    const shuffledPositions = [...cellPositions];
+    for (let i = shuffledPositions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledPositions[i], shuffledPositions[j]] = [shuffledPositions[j], shuffledPositions[i]];
+    }
+    
+    // Draw detection circles using randomly selected cell positions
+    for (let i = 0; i < detectedCells && i < shuffledPositions.length; i++) {
+        const pos = shuffledPositions[i];
+        detectionCtx.beginPath();
+        detectionCtx.arc(
+            pos.x * detectionCanvas.width, 
+            pos.y * detectionCanvas.height, 
+            15, 0, 2 * Math.PI
+        );
+        detectionCtx.strokeStyle = '#00ff00';
+        detectionCtx.lineWidth = 3;
+        detectionCtx.stroke();
+        
+        // Add label
+        detectionCtx.fillStyle = '#00ff00';
+        detectionCtx.font = 'bold 12px Arial';
+        detectionCtx.fillText(
+            `C${i+1}`, 
+            pos.x * detectionCanvas.width + 20, 
+            pos.y * detectionCanvas.height
+        );
+    }
+    
+    document.getElementById('detectedCount').textContent = detectedCells;
+    document.getElementById('totalCells').textContent = totalCells;
+    console.log('DEBUG: Updated detectedCount to:', detectedCells, 'totalCells to:', totalCells);
+    
+    // Show completion modal after a delay
+    setTimeout(() => {
+        new bootstrap.Modal(document.getElementById('completionModal')).show();
+    }, 2000);
+}
+
+document.getElementById('resetButton').addEventListener('click', function() {
+    // Reset all images and buttons
+    document.getElementById('originalImage').src = '/api/get_distorted_image2';
+    document.getElementById('enhancedImage').style.display = 'none';
+    document.getElementById('enhancedPlaceholder').style.display = 'flex';
+    document.getElementById('detectedImage').style.display = 'none';
+    document.getElementById('detectedPlaceholder').style.display = 'flex';
+    document.getElementById('detectionCanvas').style.display = 'none';
+    document.getElementById('aiResults').style.display = 'none';
+    
+    // Reset cell counts
+    document.getElementById('detectedCount').textContent = '0';
+    document.getElementById('totalCells').textContent = cellPositions.length;
+    
+    // Reset buttons
+    const enhanceBtn = document.getElementById('enhanceButton');
+    enhanceBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Melhorar com IA';
+    enhanceBtn.disabled = false;
+    enhanceBtn.classList.remove('btn-success');
+    enhanceBtn.classList.add('btn-primary');
+    
+    const detectBtn = document.getElementById('detectButton');
+    detectBtn.innerHTML = '<i class="fas fa-search"></i> IA Encontrar Células';
+    detectBtn.disabled = true;
+    detectBtn.classList.remove('btn-info');
+    detectBtn.classList.add('btn-success');
+});
+
+document.getElementById('testDetectionButton').addEventListener('click', function() {
+    console.log('DEBUG: Test detection button clicked');
+    console.log('DEBUG: Current training quality score:', phase2TrainingQuality);
+    console.log('DEBUG: Current cellPositions:', cellPositions);
+    
+    // Simulate the full detection workflow
+    const enhancedImg = document.getElementById('enhancedImage');
+    if (enhancedImg.style.display === 'none') {
+        enhancedImg.src = '/api/get_original_image2';
+        enhancedImg.style.display = 'block';
+        document.getElementById('enhancedPlaceholder').style.display = 'none';
+    }
+    
+    document.getElementById('detectedImage').src = enhancedImg.src;
+    document.getElementById('detectedImage').style.display = 'block';
+    document.getElementById('detectedPlaceholder').style.display = 'none';
+    
+    const detectedImg = document.getElementById('detectedImage');
+    detectedImg.onload = function() {
+        const rect = this.getBoundingClientRect();
+        detectionCanvas.width = rect.width;
+        detectionCanvas.height = rect.height;
+        detectionCanvas.style.display = 'block';
+        
+        simulateDetection();
+        document.getElementById('aiResults').style.display = 'block';
+    };
+});
+</script>
+{% endblock %}

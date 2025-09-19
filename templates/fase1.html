@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Fase 1 - Melhoramento da Imagem{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 text-center mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h2><i class="fas fa-sliders-h"></i> Fase 1: Melhoramento da Imagem</h2>
+                <p class="lead">Ajusta os controlos para melhorar a imagem do microscópio!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="image-container" id="imageContainer">
+                    <img id="processedImage" src="/api/get_distorted_image" alt="Imagem do Microscópio" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5><i class="fas fa-cog"></i> Controlos de Imagem</h5>
+                
+                                <div class="slider-container">
+                    <label for="sharpness" class="form-label">
+                        <i class="fas fa-adjust"></i> Nitidez: <span id="sharpnessValue">20</span>%
+                    </label>
+                    <input type="range" class="form-range" id="sharpness" min="0" max="100" value="20">
+                </div>
+                
+                <div class="slider-container">
+                    <label for="contrast" class="form-label">
+                        <i class="fas fa-circle-half-stroke"></i> Contraste: <span id="contrastValue">10</span>%
+                    </label>
+                    <input type="range" class="form-range" id="contrast" min="0" max="100" value="10">
+                </div>
+                
+                <div class="slider-container">
+                    <label for="brightness" class="form-label">
+                        <i class="fas fa-sun"></i> Brilho: <span id="brightnessValue">100</span>%
+                    </label>
+                    <input type="range" class="form-range" id="brightness" min="0" max="100" value="100">
+                </div>
+                
+                <div class="slider-container">
+                    <label for="noiseFilter" class="form-label">
+                        <i class="fas fa-filter"></i> Filtro de Ruído: <span id="noiseFilterValue">90</span>%
+                    </label>
+                    <input type="range" class="form-range" id="noiseFilter" min="0" max="100" value="90">
+                </div>
+                
+                <div class="slider-container">
+                    <label for="zoom" class="form-label">
+                        <i class="fas fa-search-plus"></i> Zoom: <span id="zoomValue">50</span>%
+                    </label>
+                    <input type="range" class="form-range" id="zoom" min="50" max="200" value="50">
+                </div>
+                
+                <div class="score-display mt-4" id="scoreDisplay">
+                    <i class="fas fa-star"></i> Pontuação: <span id="currentScore">0</span>%
+                </div>
+                
+                <div class="mt-4 d-grid gap-2">
+                    <button class="btn btn-warning" id="showAiResult">
+                        <i class="fas fa-robot"></i> Ver Resultado com IA
+                    </button>
+                    <button class="btn btn-success" id="nextPhase" style="display: none;">
+                        <i class="fas fa-arrow-right"></i> Seguir para Fase 2
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="aiResultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-robot"></i> Resultado da IA</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="row">
+                    <div class="col-6">
+                        <h6>A tua versão</h6>
+                        <img id="userResult" class="img-fluid rounded" style="max-height: 300px;">
+                    </div>
+                    <div class="col-6">
+                        <h6>Versão da IA</h6>
+                        <img id="aiResult" src="/api/get_original_image" class="img-fluid rounded" style="max-height: 300px;">
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <h5><i class="fas fa-lightbulb"></i> Mensagem Pedagógica</h5>
+                    <p>Vês como o computador pode fazer isto automaticamente? Mas foi preciso ensinar-lhe como fazer...</p>
+                    <p>A tua pontuação final: <strong><span id="finalScore"></span>%</strong></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="location.href='{{ url_for('fase2') }}'">
+                    <i class="fas fa-arrow-right"></i> Continuar para Fase 2
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentScore = 0;
+
+// Initialize sliders
+const sliders = ['sharpness', 'contrast', 'brightness', 'noiseFilter', 'zoom'];
+sliders.forEach(slider => {
+    const element = document.getElementById(slider);
+    const valueDisplay = document.getElementById(slider + 'Value');
+    
+    element.addEventListener('input', function() {
+        valueDisplay.textContent = this.value;
+        updateImage();
+    });
+});
+
+function updateImage() {
+    const params = {
+        sharpness: parseInt(document.getElementById('sharpness').value),
+        contrast: parseInt(document.getElementById('contrast').value),
+        brightness: parseInt(document.getElementById('brightness').value),
+        noise_filter: parseInt(document.getElementById('noiseFilter').value),
+        zoom: parseInt(document.getElementById('zoom').value)
+    };
+    
+    fetch('/api/process_image', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params)
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('processedImage').src = data.image;
+        currentScore = data.score;
+        document.getElementById('currentScore').textContent = currentScore.toFixed(1);
+        
+        // Update score display color based on score
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        if (currentScore >= 80) {
+            scoreDisplay.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+        } else if (currentScore >= 60) {
+            scoreDisplay.style.background = 'linear-gradient(135deg, #ffc107, #fd7e14)';
+        } else {
+            scoreDisplay.style.background = 'linear-gradient(135deg, #dc3545, #fd7e14)';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+document.getElementById('showAiResult').addEventListener('click', function() {
+    document.getElementById('userResult').src = document.getElementById('processedImage').src;
+    document.getElementById('finalScore').textContent = currentScore.toFixed(1);
+    
+    // Save score
+    fetch('/api/save_phase1_score', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({score: currentScore})
+    });
+    
+    new bootstrap.Modal(document.getElementById('aiResultModal')).show();
+});
+
+// Initialize with current slider values on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure image loads first
+    setTimeout(updateImage, 500);
+});
+</script>
+{% endblock %}

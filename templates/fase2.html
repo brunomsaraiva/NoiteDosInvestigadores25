@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+
+{% block title %}Fase 2 - Ensina a Máquina{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 text-center mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h2><i class="fas fa-hand-pointer"></i> Fase 2: Ensina a Máquina</h2>
+                <p class="lead">Clica em cada célula que conseguires encontrar na imagem!</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Toca diretamente nas células para as marcar. 
+                    A tua precisão vai determinar quão bem a IA aprende!
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="image-container" id="imageContainer">
+                    <img id="annotationImage" src="/api/get_original_image" alt="Imagem para Anotar" class="img-fluid">
+                    <canvas id="annotationCanvas" class="annotation-overlay"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5><i class="fas fa-target"></i> Progresso da Anotação</h5>
+                
+                <div class="score-display mt-3">
+                    <i class="fas fa-bullseye"></i> Células Encontradas: <span id="cellsFound">0</span> / <span id="totalCells">?</span>
+                </div>
+                
+                <div class="score-display mt-3" id="completionDisplay">
+                    <i class="fas fa-tasks"></i> Progresso: <span id="completion">0</span>%
+                </div>
+                
+                <div class="score-display mt-3" id="accuracyDisplay">
+                    <i class="fas fa-percentage"></i> Precisão: <span id="accuracy">0</span>%
+                </div>
+                
+                <div class="mt-4">
+                    <h6><i class="fas fa-lightbulb"></i> Dicas:</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-circle text-primary"></i> Procura formas circulares brilhantes</li>
+                        <li><i class="fas fa-eye text-success"></i> Algumas células podem estar sobrepostas</li>
+                        <li><i class="fas fa-mouse-pointer text-warning"></i> Clica no centro de cada célula</li>
+                    </ul>
+                </div>
+                
+                <div class="mt-4 d-grid gap-2">
+                    <button class="btn btn-info" id="toggleOverlay">
+                        <i class="fas fa-eye"></i> Mostrar Células Corretas
+                    </button>
+                    <button class="btn btn-warning" id="clearAnnotations">
+                        <i class="fas fa-eraser"></i> Limpar Anotações
+                    </button>
+                    <button class="btn btn-success" id="finishAnnotation">
+                        <i class="fas fa-check"></i> Terminar Anotação
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resultsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-chart-bar"></i> Resultados da Anotação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="row">
+                    <div class="col-4">
+                        <div class="score-display">
+                            <h4>Células Encontradas</h4>
+                            <h2><span id="finalCellsFound">0</span></h2>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="score-display">
+                            <h4>Precisão Final</h4>
+                            <h2><span id="finalAccuracy">0</span>%</h2>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="score-display">
+                            <h4>Progresso Final</h4>
+                            <h2><span id="finalProgress">0</span>%</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-success mt-4">
+                    <h5><i class="fas fa-robot"></i> Como a IA Aprende</h5>
+                    <p>A máquina aprende com o que tu marcas. Se fizeres boas anotações, ela aprende melhor!</p>
+                    <p><strong>Precisão:</strong> <span id="modalAccuracy"></span>% (qualidade das tuas anotações)</p>
+                    <p><strong>Progresso:</strong> <span id="modalProgress"></span>% (células encontradas)</p>
+                    <p>Estas pontuações vão influenciar o desempenho da IA na próxima fase.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="location.href='{{ url_for('fase3') }}'">
+                    <i class="fas fa-arrow-right"></i> Ir para Fase 3
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let annotations = [];
+let cellsFound = 0;
+let totalCells = 0;
+let canvas, ctx;
+let imageRect;
+let showOverlay = false;
+let selectedCells = new Set(); // Track which cells have been selected
+
+// Will be loaded from API
+let correctCells = [];
+let overlayImage = null;
+let allCellMasksImage = null;
+
+// Load correct cell positions from API
+async function loadCellPositions() {
+    try {
+        const response = await fetch('/api/get_cell_labels');
+        const data = await response.json();
+        correctCells = data.cell_positions;
+        totalCells = data.total_cells || correctCells.length;
+        
+        // Update UI with total cells count
+        document.getElementById('totalCells').textContent = totalCells;
+        
+        // Load overlay images
+        await loadOverlayImages();
+    } catch (error) {
+        console.error('Failed to load cell positions:', error);
+        // Fallback to hardcoded positions
+        correctCells = [
+            {x: 0.2, y: 0.3}, {x: 0.4, y: 0.2}, {x: 0.6, y: 0.4}, 
+            {x: 0.3, y: 0.6}, {x: 0.7, y: 0.7}, {x: 0.1, y: 0.8},
+            {x: 0.8, y: 0.2}, {x: 0.5, y: 0.8}
+        ];
+        totalCells = correctCells.length;
+        document.getElementById('totalCells').textContent = totalCells;
+    }
+}
+
+// Load overlay images
+async function loadOverlayImages() {
+    return Promise.all([
+        new Promise((resolve) => {
+            overlayImage = new Image();
+            overlayImage.onload = () => resolve();
+            overlayImage.onerror = () => resolve(); // Continue even if overlay fails
+            overlayImage.src = '/api/get_cell_labels_overlay';
+        }),
+        new Promise((resolve) => {
+            allCellMasksImage = new Image();
+            allCellMasksImage.onload = () => resolve();
+            allCellMasksImage.onerror = () => resolve(); // Continue even if overlay fails
+            allCellMasksImage.src = '/api/get_all_cell_masks';
+        })
+    ]);
+}
+
+function initializeCanvas() {
+    canvas = document.getElementById('annotationCanvas');
+    ctx = canvas.getContext('2d');
+    const image = document.getElementById('annotationImage');
+    
+    // Set canvas size to match image exactly
+    function resizeCanvas() {
+        // Wait for image to load and get its actual displayed dimensions
+        if (image.complete && image.naturalHeight !== 0) {
+            const rect = image.getBoundingClientRect();
+            const imgElement = image;
+            
+            // Get the actual displayed image dimensions (not container dimensions)
+            canvas.width = imgElement.offsetWidth;
+            canvas.height = imgElement.offsetHeight;
+            
+            // Position canvas to exactly overlay the image
+            canvas.style.width = imgElement.offsetWidth + 'px';
+            canvas.style.height = imgElement.offsetHeight + 'px';
+            
+            imageRect = rect;
+            redrawAnnotations();
+        }
+    }
+    
+    image.addEventListener('load', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Also try immediate resize in case image is already loaded
+    setTimeout(resizeCanvas, 100);
+    
+    // Handle clicks on canvas
+    canvas.addEventListener('click', async function(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        
+        await validateAndAddAnnotation(x, y);
+    });
+}
+
+async function validateAndAddAnnotation(x, y) {
+    try {
+        // Validate click with backend
+        const response = await fetch('/api/validate_cell_click', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({x: x, y: y})
+        });
+        
+        const result = await response.json();
+        
+        if (result.is_valid) {
+            // Check if this cell was already selected
+            if (selectedCells.has(result.label_value)) {
+                // Already selected, show feedback
+                showTemporaryMessage(`Célula ${result.label_value} já foi selecionada!`, 'warning');
+                return;
+            }
+            
+            // Add to selected cells
+            selectedCells.add(result.label_value);
+            
+            // Add annotation with the exact cell center
+            annotations.push({
+                x: x, 
+                y: y, 
+                label_value: result.label_value,
+                is_valid: true
+            });
+            
+            cellsFound++;
+            document.getElementById('cellsFound').textContent = cellsFound;
+            
+            // Show positive feedback
+            showTemporaryMessage(`Célula ${result.label_value} encontrada!`, 'success');
+            
+            // Temporarily show the cell overlay
+            if (result.overlay_image) {
+                showCellHighlight(result.overlay_image);
+            }
+        } else {
+            // Invalid click (background)
+            annotations.push({
+                x: x, 
+                y: y, 
+                label_value: 0,
+                is_valid: false
+            });
+            
+            // Show negative feedback
+            showTemporaryMessage('Clicaste no fundo! Tenta uma célula.', 'error');
+        }
+        
+        calculateAccuracy();
+        redrawAnnotations();
+        
+    } catch (error) {
+        console.error('Error validating click:', error);
+    }
+}
+
+function showTemporaryMessage(message, type) {
+    // Create temporary message element
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'} position-fixed`;
+    messageDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1000; opacity: 0.9;';
+    messageDiv.textContent = message;
+    
+    document.body.appendChild(messageDiv);
+    
+    // Remove after 2 seconds
+    setTimeout(() => {
+        document.body.removeChild(messageDiv);
+    }, 2000);
+}
+
+function showCellHighlight(overlayImageBase64) {
+    // Temporarily replace the background image with the highlighted cell
+    const originalSrc = document.getElementById('annotationImage').src;
+    document.getElementById('annotationImage').src = overlayImageBase64;
+    
+    // Restore original image after 1 second
+    setTimeout(() => {
+        document.getElementById('annotationImage').src = originalSrc;
+    }, 1000);
+}
+
+function redrawAnnotations() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw all cell masks overlay if enabled
+    if (showOverlay && allCellMasksImage) {
+        ctx.globalAlpha = 0.6;
+        // Draw overlay to exactly match canvas/image dimensions
+        ctx.drawImage(allCellMasksImage, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1.0;
+    }
+    
+    annotations.forEach((annotation, index) => {
+        ctx.beginPath();
+        ctx.arc(annotation.x * canvas.width, annotation.y * canvas.height, 8, 0, 2 * Math.PI);
+        
+        // Color code based on validity
+        if (annotation.is_valid) {
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.7)'; // Green for valid
+            ctx.strokeStyle = 'green';
+        } else {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'; // Red for invalid
+            ctx.strokeStyle = 'red';
+        }
+        
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Add number
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(index + 1, annotation.x * canvas.width, annotation.y * canvas.height + 4);
+    });
+}
+
+function calculateAccuracy() {
+    let validCount = annotations.filter(ann => ann.is_valid).length;
+    let totalCount = annotations.length;
+    
+    // Calculate accuracy based on valid selections vs total selections
+    const accuracy = totalCount > 0 ? (validCount / totalCount) * 100 : 0;
+    document.getElementById('accuracy').textContent = accuracy.toFixed(1);
+    
+    // Calculate completion percentage (valid cells found vs total cells)
+    const completion = totalCells > 0 ? (validCount / totalCells) * 100 : 0;
+    document.getElementById('completion').textContent = completion.toFixed(1);
+    
+    // Update accuracy display color
+    const accuracyDisplay = document.getElementById('accuracyDisplay');
+    if (accuracy >= 80) {
+        accuracyDisplay.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+    } else if (accuracy >= 60) {
+        accuracyDisplay.style.background = 'linear-gradient(135deg, #ffc107, #fd7e14)';
+    } else {
+        accuracyDisplay.style.background = 'linear-gradient(135deg, #dc3545, #fd7e14)';
+    }
+    
+    // Update completion display color
+    const completionDisplay = document.getElementById('completionDisplay');
+    if (completion >= 80) {
+        completionDisplay.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+    } else if (completion >= 50) {
+        completionDisplay.style.background = 'linear-gradient(135deg, #17a2b8, #20c997)';
+    } else {
+        completionDisplay.style.background = 'linear-gradient(135deg, #6f42c1, #17a2b8)';
+    }
+    
+    return accuracy;
+}
+
+document.getElementById('toggleOverlay').addEventListener('click', function() {
+    showOverlay = !showOverlay;
+    const button = this;
+    
+    if (showOverlay) {
+        button.innerHTML = '<i class="fas fa-eye-slash"></i> Esconder Células Corretas';
+        button.classList.remove('btn-info');
+        button.classList.add('btn-secondary');
+    } else {
+        button.innerHTML = '<i class="fas fa-eye"></i> Mostrar Células Corretas';
+        button.classList.remove('btn-secondary');
+        button.classList.add('btn-info');
+    }
+    
+    redrawAnnotations();
+});
+
+document.getElementById('clearAnnotations').addEventListener('click', function() {
+    annotations = [];
+    selectedCells.clear();
+    cellsFound = 0;
+    document.getElementById('cellsFound').textContent = '0';
+    document.getElementById('accuracy').textContent = '0';
+    document.getElementById('completion').textContent = '0';
+    redrawAnnotations();
+});
+
+document.getElementById('finishAnnotation').addEventListener('click', function() {
+    const finalAccuracy = calculateAccuracy();
+    const validCells = annotations.filter(ann => ann.is_valid).length;
+    const finalProgress = totalCells > 0 ? (validCells / totalCells) * 100 : 0;
+    
+    document.getElementById('finalCellsFound').textContent = validCells;
+    document.getElementById('finalAccuracy').textContent = finalAccuracy.toFixed(1);
+    document.getElementById('finalProgress').textContent = finalProgress.toFixed(1);
+    document.getElementById('modalAccuracy').textContent = finalAccuracy.toFixed(1);
+    document.getElementById('modalProgress').textContent = finalProgress.toFixed(1);
+    
+    // Save both accuracy and progress to session
+    fetch('/api/save_phase2_score', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            accuracy: finalAccuracy,
+            progress: finalProgress
+        })
+    });
+    
+    new bootstrap.Modal(document.getElementById('resultsModal')).show();
+});
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadCellPositions();
+    initializeCanvas();
+});
+</script>
+{% endblock %}

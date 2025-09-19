@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Flask App{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 text-center mb-5">
+        <div class="card">
+            <div class="card-body py-5">
+                <h1 class="display-4 mb-4">
+                    <i class="fas fa-microscope phase-icon"></i><br>
+                    Inteligência Artificial em Microscopia
+                </h1>
+                <p class="lead text-muted">
+                    Bem-vindos à aventura da Inteligência Artificial! Hoje vais descobrir como os computadores 
+                    conseguem "ver" e compreender imagens de microscópio, tal como os cientistas fazem.
+                </p>
+                <div class="row mt-4">
+                    <div class="col-md-8 offset-md-2">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-lightbulb"></i> O que é IA em Microscopia?</h5>
+                            <p class="mb-0">
+                                A Inteligência Artificial ajuda os cientistas a analisar milhares de imagens de células 
+                                e outros organismos microscópicos. Em vez de os investigadores terem de olhar uma por uma, 
+                                o computador aprende a reconhecer padrões e pode fazer o trabalho muito mais rapidamente!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card phase-card h-100" onclick="location.href='{{ url_for('fase1') }}'">
+            <div class="card-body text-center">
+                <div class="phase-icon">🔍</div>
+                <h3 class="card-title">Fase 1: Melhoramento da Imagem</h3>
+                <p class="card-text">
+                    As imagens do microscópio nem sempre saem perfeitas! Vais aprender a melhorá-las 
+                    ajustando a nitidez, contraste e brilho. Será que consegues fazer melhor que a IA?
+                </p>
+                <div class="mt-3">
+                    <span class="badge bg-primary">Processamento de Imagem</span>
+                    <span class="badge bg-success">Interativo</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card phase-card h-100" onclick="location.href='{{ url_for('fase2') }}'">
+            <div class="card-body text-center">
+                <div class="phase-icon">✏️</div>
+                <h3 class="card-title">Fase 2: Ensina a Máquina</h3>
+                <p class="card-text">
+                    Agora és tu o professor! Vais ensinar o computador a reconhecer células, 
+                    marcando-as numa imagem. Quanto melhor ensinares, melhor a IA aprende!
+                </p>
+                <div class="mt-3">
+                    <span class="badge bg-warning">Anotação</span>
+                    <span class="badge bg-info">Aprendizagem</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card phase-card h-100" onclick="location.href='{{ url_for('fase3') }}'">
+            <div class="card-body text-center">
+                <div class="phase-icon">🤖</div>
+                <h3 class="card-title">Fase 3: IA em Ação</h3>
+                <p class="card-text">
+                    Vê a IA a trabalhar! Ela vai melhorar imagens automaticamente e encontrar células 
+                    baseando-se no que aprendeu. A qualidade depende de quão bem a ensinaste!
+                </p>
+                <div class="mt-3">
+                    <span class="badge bg-danger">Automático</span>
+                    <span class="badge bg-secondary">Resultado Final</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12 text-center">
+        <div class="card">
+            <div class="card-body">
+                <h4><i class="fas fa-play-circle"></i> Pronto para começar?</h4>
+                <p>Escolhe uma fase acima ou começa pela Fase 1!</p>
+                <a href="{{ url_for('fase1') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-arrow-right"></i> Começar Aventura
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
